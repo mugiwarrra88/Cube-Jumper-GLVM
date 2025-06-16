@@ -21,11 +21,11 @@ namespace cm = GLVM::ecs::components;
 static std::vector<Entity> fallingCubes;
 static GLVM::Time::IChrono* gameTimer = nullptr;
 static double lastSpawnTime = 0.0;
-static const double SPAWN_INTERVAL = 0.8; // Spawn cube every 0.8 seconds - increased frequency
+static const double SPAWN_INTERVAL = 1.5; 
 static const float GROUND_Y_LEVEL = -20.0f; // Y level below which cubes are destroyed
 static std::random_device rd;
 static std::mt19937 gen(rd());
-static std::uniform_real_distribution<float> positionDist(-5.0f, 5.0f);
+static std::uniform_real_distribution<float> positionDist(-7.0f, 7.0f);
 static std::atomic<bool> gameRunning(true);
 
 // Forward declarations
@@ -47,7 +47,8 @@ void UpdateFallingCubes(ecs::EntityManager* entityManager, ecs::ComponentManager
 void SpawnCubeIfNeeded(ecs::EntityManager* entityManager, ecs::ComponentManager* componentManager, 
                       const GameResources& resources, Entity player);
 void CubeManagementLoop(ecs::EntityManager* entityManager, ecs::ComponentManager* componentManager, 
-                       const GameResources& resources, Entity player);
+                       const GameResources& resources, Entity player, Entity light);
+void UpdatePlayerLight(ecs::ComponentManager* componentManager, Entity player, Entity light);
 
 GameResources LoadGameAssets(core::Engine* engine)
 {
@@ -156,7 +157,7 @@ Entity CreateFallingCube(ecs::EntityManager* entityManager, ecs::ComponentManage
 	componentManager->CreateComponent<cm::mesh, cm::material, cm::transform, cm::rigidBody, cm::collider>(cube);
 		// Configure cube transform - spawn 15 units above current player position
 	*componentManager->GetComponent<cm::transform>(cube) = { 
-		.tPosition = vec3(x, playerY + 5.0f, z), 
+		.tPosition = vec3(x, playerY + 3.0f, z), 
 		.fScale = 1.0f,
 		.gltf = true 
 	};
@@ -221,14 +222,38 @@ void SpawnCubeIfNeeded(ecs::EntityManager* entityManager, ecs::ComponentManager*
 		Entity newCube = CreateFallingCube(entityManager, componentManager, resources, randomX, randomZ, playerY);
 		fallingCubes.push_back(newCube);
 		
-		lastSpawnTime = currentTime;
+		lastSpawnTime = currentTime;	}
+}
+
+void UpdatePlayerLight(ecs::ComponentManager* componentManager, Entity player, Entity light)
+{
+	cm::transform* playerTransform = componentManager->GetComponent<cm::transform>(player);
+	if (!playerTransform) return;
+	
+	// Update point light position to be above the player
+	cm::pointLight* pointLightComp = componentManager->GetComponent<cm::pointLight>(light);
+	if (pointLightComp) {
+		pointLightComp->position[0] = playerTransform->tPosition[0];
+		pointLightComp->position[1] = playerTransform->tPosition[1] + 5.0f; // 5 units above player
+		pointLightComp->position[2] = playerTransform->tPosition[2];
+	}
+	
+	// Update light visual transform to match
+	cm::transform* lightTransform = componentManager->GetComponent<cm::transform>(light);
+	if (lightTransform) {
+		lightTransform->tPosition[0] = playerTransform->tPosition[0];
+		lightTransform->tPosition[1] = playerTransform->tPosition[1] + 5.0f; // 5 units above player
+		lightTransform->tPosition[2] = playerTransform->tPosition[2];
 	}
 }
 
-void CubeManagementLoop(ecs::EntityManager* entityManager, ecs::ComponentManager* componentManager, 
-                       const GameResources& resources, Entity player)
+void CubeManagementLoop(ecs::EntityManager* entityManager, ecs::ComponentManager* componentManager,
+                       const GameResources& resources, Entity player, Entity light)
 {
 	while (gameRunning.load()) {
+		// Update light position to follow player
+		UpdatePlayerLight(componentManager, player, light);
+		
 		// Spawn new cubes if needed
 		SpawnCubeIfNeeded(entityManager, componentManager, resources, player);
 		
@@ -258,10 +283,9 @@ int main()
 	
 	// Create game entities
 	Entity player = CreatePlayerEntity(entityManager, componentManager);
-	Entity ground = CreateGroundPlane(entityManager, componentManager, resources);
-	Entity pointLight = CreatePointLight(entityManager, componentManager, resources);
-		// Start cube management thread
-	std::thread cubeThread(CubeManagementLoop, entityManager, componentManager, std::ref(resources), player);
+	Entity ground = CreateGroundPlane(entityManager, componentManager, resources);	Entity pointLight = CreatePointLight(entityManager, componentManager, resources);
+	// Start cube management thread
+	std::thread cubeThread(CubeManagementLoop, entityManager, componentManager, std::ref(resources), player, pointLight);
 	
 	// Start game loop and cleanup
 	engine->GameLoop(core::OPENGL_RENDERER);

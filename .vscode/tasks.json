@@ -19,6 +19,7 @@
 			"args": ["/c", "run.bat"],
 			"group": "test",
 			"isBackground": false,
+			"dependsOn": "Build GLVM Engine",
 		}
 	]
 }

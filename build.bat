@@ -2,10 +2,22 @@
 setlocal
 
 echo ========================================
-echo GLVM Engine - Quick Build
+echo GLVM Engine - FAST BUILD
 echo ========================================
 
 cd /d "%~dp0"
+
+REM Автоматически определяем количество ядер для максимальной скорости
+set PARALLEL_JOBS=%NUMBER_OF_PROCESSORS%
+if "%PARALLEL_JOBS%"=="" set PARALLEL_JOBS=4
+
+REM Проверяем нужна ли полная очистка (только если передан аргумент clean)
+if /I "%~1"=="clean" (
+    echo Full clean build requested...
+    if exist build rmdir /s /q build
+) else (
+    echo Using incremental build for maximum speed...
+)
 
 echo Checking MSYS2...
 if not exist "C:\msys64\msys2_shell.cmd" (
@@ -14,18 +26,18 @@ if not exist "C:\msys64\msys2_shell.cmd" (
     exit /b 1
 )
 
-echo Cleaning build directory...
-if exist build rmdir /s /q build
-mkdir build
-mkdir build\Systems
-mkdir build\WinApi
-mkdir build\GraphicAPI
+REM Создаем директории только если их нет
+if not exist build mkdir build
+if not exist build\Systems mkdir build\Systems
+if not exist build\WinApi mkdir build\WinApi
+if not exist build\GraphicAPI mkdir build\GraphicAPI
 
-echo Starting build process...
-echo This may take a few minutes...
+echo Starting FAST build with %PARALLEL_JOBS% parallel jobs...
+echo This will be much faster than before!
 echo.
 
-C:\msys64\msys2_shell.cmd -ucrt64 -defterm -here -no-start -c "/ucrt64/bin/mingw32-make -f MakefileMSYS2"
+REM Максимально быстрая сборка с оптимизациями
+C:\msys64\msys2_shell.cmd -ucrt64 -defterm -here -no-start -c "/ucrt64/bin/mingw32-make -f MakefileMSYS2 -j%PARALLEL_JOBS%"
 
 if exist "build\winGame.exe" (
     echo.

@@ -71,7 +71,7 @@ Entity CreatePlayerEntity(ecs::EntityManager* entityManager, ecs::ComponentManag
 	};	// Configure player physics
 	*componentManager->GetComponent<cm::rigidBody>(player) = { 
 		.gravityTime = 0.0f,
-		.fMass_ = 12.0f,  // Increased mass for faster falling
+		.fMass_ = 25.0f,  // Increased mass for faster falling
 		.bGravity_ = true,
 		.jump = vec3(0.0f, 18.0f, 0.0f),  // Increased jump force to compensate for higher mass
 		.jumpAccumulator = 0.0f

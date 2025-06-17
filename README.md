@@ -1,12 +1,11 @@
 # 🎮 Cube-Runner GLVM
 ## Эпическая игра на движке ScreamLark
 
-<div align="center">
-  <video width="640" height="480" controls>
-    <source src="gameplay.mp4" type="video/mp4">
-    <p>Ваш браузер не поддерживает воспроизведение видео. <a href="gameplay.mp4">Скачайте видео</a> для просмотра геймплея.</p>
-  </video>
-</div>
+
+
+
+https://github.com/user-attachments/assets/5e6c07d9-43f6-4da1-8905-1d2fdc0f7326
+
 
 ---
 

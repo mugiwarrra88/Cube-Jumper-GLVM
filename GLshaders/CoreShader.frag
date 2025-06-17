@@ -229,26 +229,23 @@ void main()
 	// Add fresnel-like rim lighting
 	vec3 viewDir = normalize(-fs_in.fragmentPosition);
 	float fresnel = 1.0 - abs(dot(normalize(fs_in.normal), viewDir));
-	fresnel = pow(fresnel, 2.0);
-	vec3 rimLight = material.ambient * fresnel * 0.4;
+	fresnel = pow(fresnel, 2.0);	vec3 rimLight = material.ambient * fresnel * 0.4;
 		// Render number on texture with enhanced visuals
-	float numberMask = renderNumber(fs_in.textureCoords, vec2(0.2, 0.3), 0.12, numberToShow);
-	
-	// Create animated color for the number
+	float numberMask = renderNumber(fs_in.textureCoords, vec2(0.35, 0.4), 0.06, numberToShow);
+		// Create animated color for the number
 	vec3 numberColor = vec3(
 		0.8 + 0.2 * sin(time * 2.0),           // Red component with pulsing
 		0.9 + 0.1 * sin(time * 3.0 + 1.0),    // Green component 
 		0.1 + 0.4 * sin(time * 1.5 + 2.0)     // Blue component for golden effect
 	);
-	
-	// Add outline effect
+		// Add outline effect
 	float outline = 0.0;
 	float outlineWidth = 0.008;
 	for (int dx = -2; dx <= 2; dx++) {
 		for (int dy = -2; dy <= 2; dy++) {
 			if (dx == 0 && dy == 0) continue;
 			vec2 offset = vec2(float(dx), float(dy)) * outlineWidth;
-			outline += renderNumber(fs_in.textureCoords + offset, vec2(0.2, 0.3), 0.12, numberToShow);
+			outline += renderNumber(fs_in.textureCoords + offset, vec2(0.35, 0.4), 0.06, numberToShow);
 		}
 	}
 	outline = clamp(outline, 0.0, 1.0) * (1.0 - numberMask); // Only show outline where there's no digit

@@ -132,8 +132,7 @@ Entity CreateGroundPlane(ecs::EntityManager* entityManager, ecs::ComponentManage
 	// Configure ground transform
 	*componentManager->GetComponent<cm::transform>(ground) = { 
 		.tPosition = { 0.0f, -20.5f, 0.0f }, 
-		.yaw = 10.0f, 
-		.pitch = 0.0f, 
+		.pitch = 90.0f,
 		.fScale = 20.2f, 
 		.gltf = true 
 	};
@@ -159,6 +158,7 @@ Entity CreateFallingCube(ecs::EntityManager* entityManager, ecs::ComponentManage
 		// Configure cube transform - spawn 15 units above current player position
 	*componentManager->GetComponent<cm::transform>(cube) = { 
 		.tPosition = vec3(x, playerY + 1.0f, z), 
+		.pitch = 90.0f,
 		.fScale = 1.0f,
 		.gltf = true 
 	};

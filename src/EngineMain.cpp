@@ -8,11 +8,14 @@
 #include "SpritesData.hpp"
 #include "Texture.hpp"
 #include "TimerCreator.hpp"
+#include "ProceduralMusicSystem.hpp"  // Add procedural music system
+#include "ISoundEngine.hpp"          // Add sound engine interface
 #include <vector>
 #include <random>
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <memory>                    // For std::make_unique
 
 using namespace GLVM;
 namespace cm = GLVM::ecs::components;
@@ -30,6 +33,9 @@ static std::mt19937 gen(rd());
 static std::uniform_real_distribution<float> positionDist(-7.0f, 7.0f);
 static std::uniform_real_distribution<float> colorDist(0.2f, 1.0f); // For random colors
 static std::atomic<bool> gameRunning(true);
+
+// Global variable for procedural music system
+static std::unique_ptr<GLVM::core::Sound::ProceduralMusicSystem> proceduralMusic;
 
 // Forward declarations
 struct GameResources {
@@ -275,6 +281,15 @@ int main()
 	CreateGroundPlane(entityManager, componentManager, resources, {40.0f*3, 20.0f*4, 40.0f*2});
 	CreateGroundPlane(entityManager, componentManager, resources, {40.0f*3, 20.0f*5, 40.0f*3});
 	
+	// Initialize procedural music system
+	proceduralMusic = std::make_unique<GLVM::core::Sound::ProceduralMusicSystem>(engine->GetSoundEngine());
+	
+	// Configure music style - use pentatonic scale for a peaceful, ambient feel
+	proceduralMusic->SetMusicStyle(GLVM::core::Sound::Scale::PENTATONIC, 70.0f); // Slow tempo
+	
+	// Start the procedural music
+	proceduralMusic->Start();
+	
 	// Start cube management thread
 	std::thread cubeThread(CubeManagementLoop, entityManager, componentManager, std::ref(resources), player);
 	
@@ -285,6 +300,12 @@ int main()
 	gameRunning.store(false);
 	if (cubeThread.joinable()) {
 		cubeThread.join();
+	}
+	
+	// Stop and cleanup procedural music system
+	if (proceduralMusic) {
+		proceduralMusic->Stop();
+		proceduralMusic.reset();
 	}
 	
 	// Cleanup timer

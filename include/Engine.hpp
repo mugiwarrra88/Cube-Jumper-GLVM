@@ -90,6 +90,9 @@ namespace GLVM::core
 		ecs::components::MeshHandle LoadMeshFromFile_GLTF(const char* pathToMesh);
 		void FPScounter();
 		void GameKill();
+		
+		// Get sound engine for procedural music
+		Sound::ISoundEngine* GetSoundEngine() const { return soundEngine; }
 	};
 }
 

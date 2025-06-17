@@ -21,7 +21,7 @@ BUILD = build
 SOURCES_ENGINE = src/Engine.cpp src/EngineMain.cpp
 SOURCES_BASE = src/ShaderProgram.cpp src/Event.cpp src/TimerCreator.cpp \
 	src/ComponentManager.cpp src/EntityManager.cpp src/SystemManager.cpp \
-	src/SoundEngineFactory.cpp src/TextureManager.cpp \
+	src/SoundEngineFactory.cpp src/ProceduralMusicSystem.cpp src/TextureManager.cpp \
 	src/WavefrontObjParser.cpp src/MeshManager.cpp src/JsonParser.cpp
 
 SOURCES_SYSTEMS = src/Systems/CollisionSystem.cpp src/Systems/AnimationSystem.cpp src/Systems/GUISystem.cpp \

@@ -14,10 +14,10 @@ SOURCES = ./src/Engine.cpp ./src/EngineMain.cpp GLPointer.c \
 	./src/Systems/CollisionSystem.cpp ./src/Systems/AnimationSystem.cpp ./src/Systems/GUISystem.cpp \
 	./src/Systems/PhysicsSystem.cpp ./src/ComponentManager.cpp ./src/EntityManager.cpp ./src/Systems/MovementSystem.cpp \
 	./src/SystemManager.cpp ./src/Systems/ProjectileSystem.cpp ./src/Systems/CameraSystem.cpp \
-	./src/WinApi/SoundEngineWaveform.cpp ./src/SoundEngineFactory.cpp ./src/GraphicAPI/Opengl.cpp ./src/GraphicAPI/Vulkan.cpp ./src/TextureManager.cpp \
+	./src/WinApi/SoundEngineWaveform.cpp ./src/SoundEngineFactory.cpp ./src/ProceduralMusicSystem.cpp ./src/GraphicAPI/Opengl.cpp ./src/GraphicAPI/Vulkan.cpp ./src/TextureManager.cpp \
 	./src/WavefrontObjParser.cpp ./src/MeshManager.cpp ./src/JsonParser.cpp \
 	./src/WinApi/WindowWinVulkan.cpp ./src/WinApi/WindowWinOpengl.cpp \
-	./textures/glvm.cpp ./textures/sample1.cpp ./textures/sample2.cpp 
+	./textures/glvm.cpp ./textures/sample1.cpp ./textures/sample2.cpp
 OBJECTS = $(SOURCES:./src/%.cpp=$(BUILD)\\%.o)
 EXECUTABLE = winGame
 

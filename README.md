@@ -1,95 +1,113 @@
-![Alt text](logo/glvm-logo.png)
+# 🎮 Cube-Runner GLVM
+## Эпическая игра на движке ScreamLark
 
-# Game Loop Versatile Modules (GLVM)
+<div align="center">
+  <video width="640" height="480" controls>
+    <source src="gameplay.mp4" type="video/mp4">
+    <p>Ваш браузер не поддерживает воспроизведение видео. <a href="gameplay.mp4">Скачайте видео</a> для просмотра геймплея.</p>
+  </video>
+</div>
 
-This is my simple game engine for Linux and Windows OS's with both Vulkan and Opengl support. Its based on entity component system (ECS) with user friendly C++ interface. Also it has partial support of GLTf and wavefront.obj 3D model formats. With GLVM you can make simple phong light of three types (directional, spot, point). Very basic physics included (collitions, gravity). 
+---
 
-## Linux
-    
-* ### Development libraries:
+## 🚀 О игре
 
-        X11, Xi, XRandR.
+**Cube-Runner** - это захватывающий 3D экшен-платформер, разработанный на мощном движке **GLVM** от легендарного стримера **ScreamLark**! Погрузитесь в мир бесконечных прыжков, невероятных трюков и адреналиновых гонок через процедурно генерируемые уровни.
 
-        Vulkan.
+### ⭐ Крутые фишки игры:
 
-        Opengl.
-    
-        Alsa.
+#### 🎯 **Продвинутая физика**
+- Реалистичная система коллизий
+- Плавные анимации прыжков и движений
 
-        pulseaudio.
+#### 🎨 **Визуальные эффекты**
+- Современные шейдеры на OpenGL
 
-* ### Repository specific:
-* #### Gentoo:
-        emerge --ask x11-libs/libX11 \
-                     x11-libs/libXi \
-                     x11-apps/xrandr \
-                     media-libs/vulkan-loader \
-                     dev-util/vulkan-tools \
-                     media-libs/mesa \
-                     media-libs/alsa-lib \
-                     media-sound/pulseaudio
+#### 🎵 **Процедурная музыка**
+- Уникальная система генерации музыки в реальном времени
+- Адаптивный саундтрек, подстраивающийся под геймплей
+- Звуковые эффекты высокого качества
 
-* #### Debian:
-        apt install libx11-dev \
-                    libxi-dev \
-                    libxrandr-dev
-                    libgl1-mesa-dev \
-                    libasound2-dev \
-                    libpulse-dev \
-                    libudev-dev
+#### 🏗️ **Архитектура движка**
+- Entity-Component-System (ECS) архитектура
+- Модульная система компонентов
+- Эффективный менеджер ресурсов
+- Поддержка GLTF моделей
 
-* #### Arch:
-        pacman -S libxi \
-                  libxrandr \
-                  mesa \
-                  libglvnd \
-                  alsa-lib \
-                  pulseaudio
+#### 🎮 **Геймплей**
+- Бесконечные процедурно генерируемые уровни
+- Плавное управление и отзывчивые контролы
+- Различные типы препятствий и платформ
 
-* #### Fedora:
-        dnf install libX11-devel \
-                    libXrandr-devel \
-                    libXi-devel \
-                    mesa-libGL-devel \
-                    alsa-lib-devel \
-                    pulseaudio-libs-devel \
-                    libudev-devel \
-                    libstdc++-static
-  
-## Windows
+## 🛠️ Сборка и запуск
 
-* ### Development libraries:
+### Требования:
+- Windows 10/11
+- OpenGL 3.3+
+- Компилятор C/C++ (MinGW или Visual Studio)
 
-        Vulkan
-        
-        Opengl
+### Быстрый старт:
+```bash
+# Сборка игры
+./build.bat
 
-* ### Specific tools:
-* #### First of all you need MSYS2:
-        You can get it from official website (https://www.msys2.org/) or
+# Запуск игры
+./run.bat
+```
 
-         winget install MSYS2.MSYS2
+### Альтернативные варианты сборки:
+```bash
+# Для Linux
+make -f MakefileLin
 
-* #### Then get needed compiler tools and Vulkan:
-  Inside MSYS2 for simplier way of installing packages frist of all we need to install pactoys:
+# Для MSYS2
+make -f MakefileMSYS2
 
-      pacman -S pactoys
+# Для Wine
+make -f MakefileWine
+```
 
-  Now we can use just shortened names of packages inside any MSYS2 toolchain:
+## 📁 Структура проекта
 
-      pacboy -S gcc:p
-      pacboy -S vulkan:p
+```
+Cube-Jumper-GLVM/
+├── src/                 # Исходный код игры
+├── include/             # Заголовочные файлы
+├── GLshaders/           # OpenGL шейдеры
+├── textures/            # Текстуры
+├── gltf/               # 3D модели в формате GLTF
+├── build/              # Скомпилированные объектные файлы
+└── third_party/        # Внешние библиотеки
+```
 
- ## Building GLVM:
-    1. In main project firectory create directory called "build".
-    2. Then copy to main directory preffered Makefile depends on operating system from Makefiles/Lin or Makefiles/Win.
-       If you building from Windows you can choose one of the four make files to build inside cmd, power shell, ucrt MSYS2 or
-       clang64 MSYS2 toolchain.
-    3. After copying make file type next command in project main directory from inside cmd, poiwer shell or MSYS2 terminal:
+## 🎯 Основные компоненты движка
 
-           make -f Makefile
+- **Entity Manager** - Управление игровыми объектами
+- **Component Manager** - Система компонентов
+- **System Manager** - Логические системы
+- **Mesh Manager** - Управление 3D моделями
+- **Texture Manager** - Управление текстурами
+- **Shader Program** - Система шейдеров
+- **Sound Engine** - Звуковая подсистема
+- **Procedural Music System** - Генерация музыки
 
-       where "Makefile" - is a make file you choosen.
+## 🎪 Особенности от ScreamLark Engine
 
-# License
-Copyright © 2024 Maksim Manokhin a.k.a. Yuriorkis_Scream. Contacts: <fellfrostqtw@gmail.com>
+Движок GLVM создан с особым вниманием к производительности и креативности:
+
+- 🔥 **Blazing Fast Performance** - Оптимизированный рендеринг
+- 🎨 **Creative Freedom** - Гибкая система компонентов
+- 🎵 **Immersive Audio** - Революционная система звука
+- 🚀 **Modern Graphics** - Передовые графические технологии
+
+## 📝 Лицензия
+
+Этот проект распространяется под лицензией, указанной в файле [LICENSE](LICENSE).
+
+## 💫 Credits
+
+Создано с ❤️ на движке **ScreamLark GLVM Engine**
+
+---
+
+*"Каждый прыжок - это шаг к совершенству!"*

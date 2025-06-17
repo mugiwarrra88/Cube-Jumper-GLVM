@@ -41,7 +41,7 @@ struct GameResources {
 GameResources LoadGameAssets(core::Engine* engine);
 Entity CreatePlayerEntity(ecs::EntityManager* entityManager, ecs::ComponentManager* componentManager);
 Entity CreateGroundPlane(ecs::EntityManager* entityManager, ecs::ComponentManager* componentManager, 
-                        const GameResources& resources);
+                        const GameResources& resources, const vec3& position = {0.0f, -20.5f, 0.0f});
 Entity CreateFallingCube(ecs::EntityManager* entityManager, ecs::ComponentManager* componentManager, 
                         const GameResources& resources, float x, float z, float playerY);
 vec3 GenerateRandomColor(); // Generate random color for cubes
@@ -124,16 +124,16 @@ Entity CreatePlayerEntity(ecs::EntityManager* entityManager, ecs::ComponentManag
 }
 
 Entity CreateGroundPlane(ecs::EntityManager* entityManager, ecs::ComponentManager* componentManager, 
-                        const GameResources& resources)
+                        const GameResources& resources, const vec3& position)
 {
 	Entity ground = entityManager->CreateEntity();
 	componentManager->CreateComponent<cm::material, cm::mesh, cm::transform, cm::collider>(ground);
 	
-	// Configure ground transform
+	// Configure ground transform with passed position
 	*componentManager->GetComponent<cm::transform>(ground) = { 
-		.tPosition = { 0.0f, -20.5f, 0.0f }, 
+		.tPosition = position, 
 		.pitch = 90.0f,
-		.fScale = 20.2f, 
+		.fScale = 10.2f, 
 		.gltf = true 
 	};
 	vec3 randomColor = GenerateRandomColor();
@@ -229,6 +229,21 @@ void CubeManagementLoop(ecs::EntityManager* entityManager, ecs::ComponentManager
 	while (gameRunning.load()) {
 		// Spawn new cubes if needed
 		SpawnCubeIfNeeded(entityManager, componentManager, resources, player);
+				// Check if player has fallen below Y = -50 and teleport back if so
+		cm::transform* playerTransform = componentManager->GetComponent<cm::transform>(player);
+		if (playerTransform && playerTransform->tPosition[1] < -50.0f) {
+			// Teleport player back to starting position
+			playerTransform->tPosition[0] = 2.7f;
+			playerTransform->tPosition[1] = 10.0f;
+			playerTransform->tPosition[2] = 3.0f;
+			
+			// Reset gravity time to prevent continued falling momentum
+			cm::rigidBody* playerRigidBody = componentManager->GetComponent<cm::rigidBody>(player);
+			if (playerRigidBody) {
+				playerRigidBody->gravityTime = 1.0f;
+				playerRigidBody->jumpAccumulator = 0.0f;
+			}
+		}
 			
 		// Sleep for a short time to avoid consuming too much CPU
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -251,7 +266,14 @@ int main()
 	// Load game assets
 	GameResources resources = LoadGameAssets(engine);	// Create game entities
 	Entity player = CreatePlayerEntity(entityManager, componentManager);
-	Entity ground = CreateGroundPlane(entityManager, componentManager, resources);
+	CreateGroundPlane(entityManager, componentManager, resources, {0.0f, -20.0f, 0.0f});
+	CreateGroundPlane(entityManager, componentManager, resources, {40.0f, 0.0f, 0.0f});
+	CreateGroundPlane(entityManager, componentManager, resources, {40.0f*2, 20.0f, 0.0f});
+	CreateGroundPlane(entityManager, componentManager, resources, {40.0f*3, 20.0f*2, 0.0f});
+	
+	CreateGroundPlane(entityManager, componentManager, resources, {40.0f*3, 20.0f*3, 40.0f});
+	CreateGroundPlane(entityManager, componentManager, resources, {40.0f*3, 20.0f*4, 40.0f*2});
+	CreateGroundPlane(entityManager, componentManager, resources, {40.0f*3, 20.0f*5, 40.0f*3});
 	
 	// Start cube management thread
 	std::thread cubeThread(CubeManagementLoop, entityManager, componentManager, std::ref(resources), player);

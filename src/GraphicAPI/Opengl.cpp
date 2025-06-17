@@ -104,7 +104,7 @@ namespace GLVM::core
 
 		ecs::ComponentManager* pComponent_Manager = ecs::ComponentManager::GetInstance();
 
-		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		coreShaderProgram->Use();
@@ -177,7 +177,7 @@ namespace GLVM::core
 //			float distance = VectorLength(playerTransformComponent->tPosition, pointLightComponent->position);
 
 //			if ( distance < 4.5f ) {
-				glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+				glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 				sampledPointLightEntityIDcontainer.push_back(i);
 				

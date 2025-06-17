@@ -347,10 +347,17 @@ namespace GLVM::core
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		ComputeProjectionMatrix(coreShaderProgram);
 		ComputeViewMatrix(coreShaderProgram, *playerTransformComponent, *playerViewComponent);
-		coreShaderProgram->SetInt("shadows", shadows);
-		coreShaderProgram->SetBool("reverseNormals", reverseNormalsFlag);
+		coreShaderProgram->SetInt("shadows", shadows);		coreShaderProgram->SetBool("reverseNormals", reverseNormalsFlag);
 		coreShaderProgram->SetFloat("farPlane", farPlaneCubeShadowMap);
 		coreShaderProgram->SetVec3("viewPosition", viewPosition);
+		// Add time uniform for shader animation effects
+		static auto startTime = std::chrono::high_resolution_clock::now();
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+		coreShaderProgram->SetFloat("time", time);
+		
+		// Set number to display on texture (player's Y position)
+		coreShaderProgram->SetFloat("numberToShow", viewPosition[1]);
 
 		coreShaderProgram->SetInt("directionalLightSpaceMatrixContainerSize",
 								  sampledDirectionalLightEntityIDcontainer.size());

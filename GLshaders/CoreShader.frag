@@ -1,18 +1,12 @@
 #version 410 core
 out vec4 fragColor;
-// flat in int spotLightSpaceMatrixArraySize;
-// flat in int directionalLightSpaceMatrixArraySize;
-
-#define DIRECTIONAL_LIGHTS_NUMBER                          2
-#define POINT_LIGHTS_NUMBER                                2
-#define SPOT_LIGHTS_NUMBER                                 2
 
 in VS_OUT {
 	vec3 fragmentPosition;
 	vec3 normal;
 	vec2 textureCoords;
-	vec4 fragmentPositionDirectionalLightSpace[DIRECTIONAL_LIGHTS_NUMBER];
-	vec4 fragmentPositionSpotLightSpace[SPOT_LIGHTS_NUMBER];
+	vec4 fragmentPositionDirectionalLightSpace[2];
+	vec4 fragmentPositionSpotLightSpace[2];
 } fs_in;
 
 struct Material {
@@ -22,359 +16,254 @@ struct Material {
     float     shininess;
 }; 
 
-struct DirectionalLight {
-	vec3 position;
-	vec3 direction;
-  
-    vec3 ambient;
-    vec3 diffuse;
-    vec3 specular;
-};
+uniform Material material;
+uniform float time; // Time uniform for animation
+uniform float numberToShow; // Number to display (0-999)
 
-struct PointLight {
-    vec3 position;
+// Function to get bit from digit bitmap (5x7 pixels)
+float getBit(int bitmap[7], int x, int y) {
+    if (x < 0 || x >= 5 || y < 0 || y >= 7) return 0.0;
+    return float((bitmap[y] >> (4 - x)) & 1);
+}
 
-	vec3 ambient;
-    vec3 diffuse;
-    vec3 specular;
+// Enhanced digit bitmaps (5x7 pixels each for better quality)
+void getDigitBitmap(int digit, out int bitmap[7]) {
+    if (digit == 0) {
+        bitmap[0] = 0x0E; // 01110
+        bitmap[1] = 0x11; // 10001
+        bitmap[2] = 0x11; // 10001
+        bitmap[3] = 0x11; // 10001
+        bitmap[4] = 0x11; // 10001
+        bitmap[5] = 0x11; // 10001
+        bitmap[6] = 0x0E; // 01110
+    } else if (digit == 1) {
+        bitmap[0] = 0x04; // 00100
+        bitmap[1] = 0x0C; // 01100
+        bitmap[2] = 0x04; // 00100
+        bitmap[3] = 0x04; // 00100
+        bitmap[4] = 0x04; // 00100
+        bitmap[5] = 0x04; // 00100
+        bitmap[6] = 0x1F; // 11111
+    } else if (digit == 2) {
+        bitmap[0] = 0x0E; // 01110
+        bitmap[1] = 0x11; // 10001
+        bitmap[2] = 0x01; // 00001
+        bitmap[3] = 0x02; // 00010
+        bitmap[4] = 0x04; // 00100
+        bitmap[5] = 0x08; // 01000
+        bitmap[6] = 0x1F; // 11111
+    } else if (digit == 3) {
+        bitmap[0] = 0x0E; // 01110
+        bitmap[1] = 0x11; // 10001
+        bitmap[2] = 0x01; // 00001
+        bitmap[3] = 0x06; // 00110
+        bitmap[4] = 0x01; // 00001
+        bitmap[5] = 0x11; // 10001
+        bitmap[6] = 0x0E; // 01110
+    } else if (digit == 4) {
+        bitmap[0] = 0x02; // 00010
+        bitmap[1] = 0x06; // 00110
+        bitmap[2] = 0x0A; // 01010
+        bitmap[3] = 0x12; // 10010
+        bitmap[4] = 0x1F; // 11111
+        bitmap[5] = 0x02; // 00010
+        bitmap[6] = 0x02; // 00010
+    } else if (digit == 5) {
+        bitmap[0] = 0x1F; // 11111
+        bitmap[1] = 0x10; // 10000
+        bitmap[2] = 0x1E; // 11110
+        bitmap[3] = 0x01; // 00001
+        bitmap[4] = 0x01; // 00001
+        bitmap[5] = 0x11; // 10001
+        bitmap[6] = 0x0E; // 01110
+    } else if (digit == 6) {
+        bitmap[0] = 0x06; // 00110
+        bitmap[1] = 0x08; // 01000
+        bitmap[2] = 0x10; // 10000
+        bitmap[3] = 0x1E; // 11110
+        bitmap[4] = 0x11; // 10001
+        bitmap[5] = 0x11; // 10001
+        bitmap[6] = 0x0E; // 01110
+    } else if (digit == 7) {
+        bitmap[0] = 0x1F; // 11111
+        bitmap[1] = 0x01; // 00001
+        bitmap[2] = 0x02; // 00010
+        bitmap[3] = 0x04; // 00100
+        bitmap[4] = 0x08; // 01000
+        bitmap[5] = 0x08; // 01000
+        bitmap[6] = 0x08; // 01000
+    } else if (digit == 8) {
+        bitmap[0] = 0x0E; // 01110
+        bitmap[1] = 0x11; // 10001
+        bitmap[2] = 0x11; // 10001
+        bitmap[3] = 0x0E; // 01110
+        bitmap[4] = 0x11; // 10001
+        bitmap[5] = 0x11; // 10001
+        bitmap[6] = 0x0E; // 01110
+    } else if (digit == 9) {
+        bitmap[0] = 0x0E; // 01110
+        bitmap[1] = 0x11; // 10001
+        bitmap[2] = 0x11; // 10001
+        bitmap[3] = 0x0F; // 01111
+        bitmap[4] = 0x01; // 00001
+        bitmap[5] = 0x02; // 00010
+        bitmap[6] = 0x0C; // 01100
+    } else {
+        // Default case - fill with zeros
+        for (int i = 0; i < 7; i++) {
+            bitmap[i] = 0x00;
+        }
+    }
+}
 
-	float constant;
-	float linear;
-	float quadratic;
-};
+// Function to render a single digit at specified position with smoothing
+float renderDigit(vec2 uv, vec2 pos, float scale, int digit) {
+    vec2 digitUV = (uv - pos) / scale;
+    
+    if (digitUV.x < 0.0 || digitUV.x > 1.0 || digitUV.y < 0.0 || digitUV.y > 1.0) {
+        return 0.0;
+    }
+    
+    // Scale to 5x7 grid
+    float fx = digitUV.x * 5.0;
+    float fy = (1.0 - digitUV.y) * 7.0;
+    
+    int x = int(fx);
+    int y = int(fy);
+    
+    // Get fractional parts for smoothing
+    float fracX = fract(fx);
+    float fracY = fract(fy);
+    
+    int bitmap[7];
+    getDigitBitmap(digit, bitmap);
+    
+    // Sample with bilinear filtering for smoother edges
+    float p00 = getBit(bitmap, x, y);
+    float p10 = getBit(bitmap, x + 1, y);
+    float p01 = getBit(bitmap, x, y + 1);
+    float p11 = getBit(bitmap, x + 1, y + 1);
+    
+    float p0 = mix(p00, p10, fracX);
+    float p1 = mix(p01, p11, fracX);
+    
+    return mix(p0, p1, fracY);
+}
 
-struct SpotLight {
-	vec3  position;
-	vec3  direction;
-	float cutOff;
-	float outerCutOff;
-
-	vec3  ambient;
-	vec3  diffuse;
-	vec3  specular;
-
-	float constant;
-	float linear;
-	float quadratic;
-};
-
-uniform bool             shadows;
-uniform float            farPlane;
-uniform Material         material;
-uniform vec3             viewPosition;
-
-uniform DirectionalLight directionalLights[DIRECTIONAL_LIGHTS_NUMBER];
-uniform sampler2D        directionalLightFlatShadowMapArray[DIRECTIONAL_LIGHTS_NUMBER];
-uniform int              sampledShadowOrdinalNumbers[DIRECTIONAL_LIGHTS_NUMBER];
-uniform int              sampledDirectionalShadowOrdinalNumbersArraySize;
-uniform int              directionalLightsArraySize;
-
-uniform PointLight       pointLights[POINT_LIGHTS_NUMBER];
-uniform samplerCube      pointLightCubeShadowMapArray[POINT_LIGHTS_NUMBER];
-uniform int              pointLightCubeShadowMapComponentIndices[POINT_LIGHTS_NUMBER];
-uniform int              sampledPointShadowOrdinalNumbersArraySize;
-uniform int              pointLightsArraySize;
-
-uniform SpotLight        spotLights[SPOT_LIGHTS_NUMBER];
-uniform sampler2D        spotLightFlatShadowMapArray[SPOT_LIGHTS_NUMBER];
-uniform int              spotLightFlatShadowMapComponentIndices[SPOT_LIGHTS_NUMBER];
-uniform int              sampledSpotShadowOrdinalNumbersArraySize;
-uniform int              spotLightArraySize;
-
-//vec3 ComputeDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDirection);
-vec3 ComputeDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDirection);
-vec3 ComputePointLight(PointLight light, vec3 normal, vec3 fragmentPosition, vec3 viewDirection);
-vec3 ComputeSpotLight(SpotLight light, vec3 normal, vec3 fragmentPosition, vec3 viewDirection);
-float ComputeDirectionalShadow(DirectionalLight light, vec4 fragmentPositionDirectionalLightSpace, sampler2D flatShadowMap);
-float ComputePointShadow(PointLight light, vec3 fragmentPosition, samplerCube cubeShadowMap);
-float ComputeSpotShadow(SpotLight light, vec4 fragmentPositionSpotLightSpace, sampler2D flatShadowMap);
+// Function to render a number (up to 3 digits) with improved spacing and effects
+float renderNumber(vec2 uv, vec2 pos, float scale, float number) {
+    int num = int(number);
+    float result = 0.0;
+    
+    // Add glow effect around digits
+    vec2 glowUV = uv;
+    float glow = 0.0;
+    
+    if (num >= 100) {
+        int hundreds = num / 100;
+        float digit = renderDigit(uv, pos + vec2(0.0, 0.0), scale, hundreds);
+        result += digit;
+        
+        // Add glow
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                vec2 offset = vec2(float(dx), float(dy)) * scale * 0.1;
+                glow += renderDigit(uv, pos + vec2(0.0, 0.0) + offset, scale, hundreds) * 0.3;
+            }
+        }
+    }
+    
+    if (num >= 10) {
+        int tens = (num % 100) / 10;
+        float digit = renderDigit(uv, pos + vec2(scale * 1.4, 0.0), scale, tens);
+        result += digit;
+        
+        // Add glow
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                vec2 offset = vec2(float(dx), float(dy)) * scale * 0.1;
+                glow += renderDigit(uv, pos + vec2(scale * 1.4, 0.0) + offset, scale, tens) * 0.3;
+            }
+        }
+    }
+    
+    int ones = num % 10;
+    float digit = renderDigit(uv, pos + vec2(scale * 2.8, 0.0), scale, ones);
+    result += digit;
+    
+    // Add glow for ones digit
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            vec2 offset = vec2(float(dx), float(dy)) * scale * 0.1;
+            glow += renderDigit(uv, pos + vec2(scale * 2.8, 0.0) + offset, scale, ones) * 0.3;
+        }
+    }
+    
+    return clamp(result + glow * 0.5, 0.0, 1.0);
+}
 
 void main()
 {
-	vec3 normal        = normalize(fs_in.normal);
-	vec3 viewDirection = normalize(viewPosition - fs_in.fragmentPosition);
+	// Sample the main texture
+	vec4 textureColor = texture(material.diffuse, fs_in.textureCoords);
 	
-	vec3 result = vec3(0.0, 0.0, 0.0);
-	// Compute directional lighting
-	int directionalLightIndicesCounter    = 0;
-	int directionalLightIndexAccumulator  = -1;
-	if(sampledDirectionalShadowOrdinalNumbersArraySize > 0)
-		directionalLightIndexAccumulator  = sampledShadowOrdinalNumbers[directionalLightIndicesCounter];
-
-	float shadow = 0.0;
-	for (int f = 0; f < directionalLightsArraySize; ++f) {
-		if(f == directionalLightIndexAccumulator && directionalLightIndicesCounter != sampledDirectionalShadowOrdinalNumbersArraySize) {
-			shadow = ComputeDirectionalShadow(directionalLights[f], fs_in.fragmentPositionDirectionalLightSpace[f],
-			                                    directionalLightFlatShadowMapArray[f]);
-			++directionalLightIndicesCounter;
-			directionalLightIndexAccumulator = sampledShadowOrdinalNumbers[directionalLightIndicesCounter];
-		}
-
-		vec3 light  = ComputeDirectionalLight(directionalLights[f], normal, viewDirection);
-		result += (1.0 - shadow) * light;
-		if(shadow > 0.0)
-			shadow = 0.0;
-	}
-	// Compute point lights
-	int pointLightIndicesCounter    = 0;
-	int pointLightIndexAccumulator  = -1;
-	if(sampledPointShadowOrdinalNumbersArraySize > 0)
-		pointLightIndexAccumulator  = pointLightCubeShadowMapComponentIndices[pointLightIndicesCounter];
-
-	shadow = 0.0;
-	for (int i = 0; i < pointLightsArraySize; ++i) {
-		if(i == pointLightIndexAccumulator && pointLightIndicesCounter != sampledPointShadowOrdinalNumbersArraySize) {
-			shadow = ComputePointShadow(pointLights[i], fs_in.fragmentPosition,
-										pointLightCubeShadowMapArray[pointLightIndicesCounter]);
-			++pointLightIndicesCounter;
-			pointLightIndexAccumulator = pointLightCubeShadowMapComponentIndices[pointLightIndicesCounter];
-		}
-		vec3 light = ComputePointLight(pointLights[i], normal, fs_in.fragmentPosition, viewDirection);
-		result += (1.0 - shadow) * light;
-		if(shadow > 0.0)
-			shadow = 0.0;
-	}
-	// Compute spot light
-	int spotLightIndicesCounter    = 0;
-	int spotLightIndexAccumulator  = -1;
-//	int spotLightArraySize = spotLightSpaceMatrixArraySize;
-//	int spotLightArraySize = 1;
-	if(sampledSpotShadowOrdinalNumbersArraySize > 0)
-		spotLightIndexAccumulator = spotLightFlatShadowMapComponentIndices[spotLightIndicesCounter];
-
-	shadow = 0.0;
-	for (int j = 0; j < spotLightArraySize; ++j) {
-		vec3 lightDirection = normalize(spotLights[j].position - fs_in.fragmentPosition);
-		float theta         = dot(lightDirection, normalize(-spotLights[j].direction));
-		if(j == spotLightIndexAccumulator && spotLightIndicesCounter != sampledSpotShadowOrdinalNumbersArraySize) {    ///< DELETE GOVNO!!!!!!!
-			shadow = ComputeSpotShadow(spotLights[j], fs_in.fragmentPositionSpotLightSpace[j],
-										spotLightFlatShadowMapArray[spotLightIndicesCounter]);
-			
-			++spotLightIndicesCounter;
-			spotLightIndexAccumulator = spotLightFlatShadowMapComponentIndices[spotLightIndicesCounter];
-		}
-		vec3 light = ComputeSpotLight(spotLights[j], normal, fs_in.fragmentPosition, viewDirection);
-		result += (1.0 - shadow) * light;
-		if(shadow > 0.0)
-			shadow = 0.0;
-
-//		result += ComputeSpotLight(spotLights[j], normal, fs_in.fragmentPosition, viewDirection);
-	}
-
-	// Compute shadow
-	// float shadow = ComputeShadow(fs_in.fragmentPositionPointLightSpace);
-	// result = result * (1.0 - shadow);
-
-
-	// float depthValue = texture(spotLightFlatShadowMapArray[0], fs_in.textureCoords).r;
-	// fragColor = vec4(vec3(depthValue), 1.0);
-	fragColor = vec4(result, 1.0);
-//	fragColor = vec4(spotLightArraySize, spotLightArraySize ,spotLightArraySize, 1.0);
-}
-
-vec3 ComputeDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDirection) {
-	vec3 lightDirection = normalize(light.direction);
-	// diffuse shading
-	float difference    = max(dot(normal, lightDirection), 0.0f);
-	// specular shading
-	vec3 reflectDirection   = reflect(-lightDirection, normal);
-	float specularComponent = pow(max(dot(viewDirection, reflectDirection), 0.0f), material.shininess);
-	// combine results
-	vec3 ambient  = light.ambient * material.ambient;
-	vec3 diffuse  = light.diffuse * difference * vec3(texture(material.diffuse, fs_in.textureCoords));
-	vec3 specular = light.specular * specularComponent * vec3(texture(material.specular, fs_in.textureCoords));
-
-	return (ambient + diffuse + specular);
-}
-
-vec3 ComputePointLight(PointLight light, vec3 normal, vec3 fragmentPosition, vec3 viewDirection) {
-	vec3 lightDirection = normalize(light.position - fragmentPosition);
-	// diffuse shading
-	float difference    = max(dot(normal, lightDirection), 0.0f);
-	// specular shading
-	vec3 reflectDirection   = reflect(-lightDirection, normal);
-	float specularComponent = pow(max(dot(viewDirection, reflectDirection), 0.0f), material.shininess);
-	// attenuation
-	float distance    = length(light.position - fragmentPosition);
-	float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
-
-	// combine results
-	vec3 ambient  = light.ambient * material.ambient;
-	vec3 diffuse  = light.diffuse * difference * vec3(texture(material.diffuse, fs_in.textureCoords));
-	vec3 specular = light.specular * specularComponent * vec3(texture(material.specular, fs_in.textureCoords));
-
-	ambient  *= attenuation;
-	diffuse  *= attenuation;
-	specular *= attenuation;
-
-	return (ambient + diffuse + specular);
-}
-
-vec3 ComputeSpotLight(SpotLight light, vec3 normal, vec3 fragmentPosition, vec3 viewDirection) {
-	vec3 lightDirection = normalize(light.position - fragmentPosition);
-	// diffuse shading
-	float difference    = max(dot(normal, lightDirection), 0.0f);
-	// specular shading
-	vec3 reflectDirection   = reflect(-lightDirection, normal);
-	float specularComponent = pow(max(dot(viewDirection, reflectDirection), 0.0f), material.shininess);
-	// attenuation
-	float distance    = length(light.position - fragmentPosition);
-	float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance)); 
-	// spotlight intensity
-    float theta     = dot(lightDirection, normalize(-light.direction));
-	float epsilon   = light.cutOff - light.outerCutOff;
-	float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
-	// combine results
-	vec3 ambient  = light.ambient * material.ambient;
-	vec3 diffuse  = light.diffuse * difference * vec3(texture(material.diffuse, fs_in.textureCoords));
-	vec3 specular = light.specular * specularComponent * vec3(texture(material.specular, fs_in.textureCoords));
-//	ambient  *= attenuation * intensity;
-    diffuse  *= attenuation * intensity;
-    specular *= attenuation * intensity;
+	// Apply material ambient color for tinting
+	vec3 baseColor = textureColor.rgb * material.ambient;
 	
-    return (ambient + diffuse + specular);
-}
-
-float ComputeDirectionalShadow(DirectionalLight light, vec4 fragmentPositionDirectionalLightSpace, sampler2D flatShadowMap) {
-	// Perform perspective devide
-	vec3 projectiveCoordinates = fragmentPositionDirectionalLightSpace.xyz / fragmentPositionDirectionalLightSpace.w;
-	// Transform to [0.1] range
-	projectiveCoordinates      = projectiveCoordinates * 0.5 + 0.5;
-	// Get closest depth value from light's perspective (using [0,1] range fragmentPositionLight as coordinates)
-	float closestDepth         = texture(flatShadowMap, projectiveCoordinates.xy).r;
-	// Get depth of current fragment from light's perspective
-	float currentDepth         = projectiveCoordinates.z;
-	// Check whether current fragment position is in shadow
-	vec3 normal = normalize(fs_in.normal);
-//	vec3 lightDir = normalize(lightPos - fs_in.fragmentPositionPointLightSpace.xyz);
-	vec3 lightDir = normalize(light.position - fs_in.fragmentPosition);
-	float bias                 = max(0.01 * (1.0 - dot(normal, lightDir)), 0.005);
-//	float shadow               = currentDepth - bias > closestDepth ? 1.0 : 0.0;
-
-	// PCF
-	float shadow = 0.0;
-	vec2 texelSize = 1.0 / textureSize(flatShadowMap, 0);
-	for (int x = -1; x <= 1; ++x)
-	{
-		for (int y = -1; y <= 1; ++y)
-		{
-			float pcfDepth = texture(flatShadowMap, projectiveCoordinates.xy + vec2(x, y) * texelSize).r;
-			shadow += currentDepth - bias > pcfDepth ? 0.5 : 0.0;
+	// Add animated glow effect based on texture coordinates
+	vec2 center = vec2(0.5, 0.5);
+	float distanceFromCenter = distance(fs_in.textureCoords, center);
+	
+	// Create pulsing glow effect
+	float pulse = sin(time * 3.0) * 0.5 + 0.5; // Oscillates between 0 and 1
+	float glow = 1.0 - distanceFromCenter;
+	glow = pow(glow, 2.0) * pulse * 0.3; // Soft glow from center
+	
+	// Add subtle color shifting based on position
+	vec3 colorShift = vec3(
+		sin(time + fs_in.textureCoords.x * 6.28) * 0.1,
+		sin(time * 1.3 + fs_in.textureCoords.y * 6.28) * 0.1,
+		sin(time * 0.7 + distanceFromCenter * 6.28) * 0.1
+	);
+	
+	// Add fresnel-like rim lighting
+	vec3 viewDir = normalize(-fs_in.fragmentPosition);
+	float fresnel = 1.0 - abs(dot(normalize(fs_in.normal), viewDir));
+	fresnel = pow(fresnel, 2.0);
+	vec3 rimLight = material.ambient * fresnel * 0.4;
+		// Render number on texture with enhanced visuals
+	float numberMask = renderNumber(fs_in.textureCoords, vec2(0.2, 0.3), 0.12, numberToShow);
+	
+	// Create animated color for the number
+	vec3 numberColor = vec3(
+		0.8 + 0.2 * sin(time * 2.0),           // Red component with pulsing
+		0.9 + 0.1 * sin(time * 3.0 + 1.0),    // Green component 
+		0.1 + 0.4 * sin(time * 1.5 + 2.0)     // Blue component for golden effect
+	);
+	
+	// Add outline effect
+	float outline = 0.0;
+	float outlineWidth = 0.008;
+	for (int dx = -2; dx <= 2; dx++) {
+		for (int dy = -2; dy <= 2; dy++) {
+			if (dx == 0 && dy == 0) continue;
+			vec2 offset = vec2(float(dx), float(dy)) * outlineWidth;
+			outline += renderNumber(fs_in.textureCoords + offset, vec2(0.2, 0.3), 0.12, numberToShow);
 		}
 	}
-	shadow /= 9.0;
+	outline = clamp(outline, 0.0, 1.0) * (1.0 - numberMask); // Only show outline where there's no digit
 	
-	if (projectiveCoordinates.z > 1.0)
-		shadow = 0.0;
-
-	// if (projectiveCoordinates.x > 1.0 || projectiveCoordinates.x < -1.0)
-	// 	shadow = 0.0;
-
-	// if (projectiveCoordinates.y > 1.0 || projectiveCoordinates.y < -1.0)
-	// 	shadow = 0.0;
-		
-	return shadow;
+	// Combine effects
+	vec3 finalColor = baseColor + (baseColor * glow) + colorShift + rimLight;
+	
+	// Add number with glow and outline
+	finalColor = mix(finalColor, numberColor, numberMask);
+	finalColor = mix(finalColor, vec3(0.0, 0.0, 0.0), outline * 0.8); // Dark outline
+	
+	// Add slight metallic shine
+	finalColor += vec3(0.1) * pow(fresnel, 4.0);
+	
+	fragColor = vec4(finalColor, textureColor.a);
 }
 
-float ComputePointShadow(PointLight light, vec3 fragmentPosition, samplerCube cubeShadowMap) {
-	// Get vector between fragment position and light position
-	vec3 fragmentToLight       = fragmentPosition - light.position;
-	// // Get the fragment to light vector to sample from the shadow map
-	// float closestDepth         = texture(cubeShadowMap, fragmentToLight).r;
-	// // It is currently in linear range between [0,1], let's re-transform it back to original depth value
-	// closestDepth              *= farPlane;
-	// Now get current linear depth as the length between the fragment and light position
-	float currentDepth         = length(fragmentToLight);
-	// Test for shadows simple
-	// float bias                 = 0.05;
-	// float shadow               = currentDepth - bias > closestDepth ? 0.5 : 0.0;
 
-	// Test for shadows full solid cube of offsets
-	// float bias    = 0.05;
-	// float shadow  = 0.0;
-	// float samples = 4.0;
-	// float offset  = 0.1;
-	// for(float x = -offset; x < offset; x += offset / (samples * 0.5))
-	// 	{
-	// 		for(float y = -offset; y < offset; y += offset / (samples * 0.5))
-	// 			{
-	// 				for(float z = -offset; z < offset; z += offset / (samples * 0.5))
-	// 					{
-	// 						float closestDepth = texture(cubeShadowMap, fragmentToLight + vec3(x, y, z)).r;
-	// 						closestDepth *= farPlane; ///< undo mapping [0;1]
-	// 						if(currentDepth - bias > closestDepth)
-	// 							shadow += 1.0;
-	// 					}
-	// 			}
-	// 	}
-	// shadow /= (samples * samples * samples);
-
-	// Test for shadows ranged cube of offsets
-	vec3 sampleOffsetDirections[20] = vec3[]
-		(
-			vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1), 
-			vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
-			vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
-			vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
-			vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
-		);  
-	
-	float shadow  = 0.0;
-	float bias    = 0.15;
-	float samples = 20;
-	float viewDistance = length(viewPosition - fragmentPosition);
-	float diskRadius   = (1.0 + (viewDistance / farPlane)) / 25.0;
-	for(int i = 0; i < samples; ++i)
-		{
-			float closestDepth = texture(cubeShadowMap, fragmentToLight + sampleOffsetDirections[i] *
-										 diskRadius).r;
-			closestDepth *= farPlane; // undo mapping [0;1]
-			if(currentDepth - bias > closestDepth)
-				shadow += 1.0;
-		}
-	shadow /= float(samples);
-
-//	return closestDepth;
-	return shadow;
-}
-
-float ComputeSpotShadow(SpotLight light, vec4 fragmentPositionSpotLightSpace, sampler2D flatShadowMap) {
-	// Perform perspective devide
-	vec3 projectiveCoordinates = fragmentPositionSpotLightSpace.xyz / fragmentPositionSpotLightSpace.w;
-	// Transform to [0.1] range
-	projectiveCoordinates      = projectiveCoordinates * 0.5 + 0.5;
-	// Get closest depth value from light's perspective (using [0,1] range fragmentPositionLight as coordinates)
-	float closestDepth         = texture(flatShadowMap, projectiveCoordinates.xy).r;
-	// Get depth of current fragment from light's perspective
-	float currentDepth         = projectiveCoordinates.z;
-	// Check whether current fragment position is in shadow
-	vec3 normal = normalize(fs_in.normal);
-//	vec3 lightDir = normalize(lightPos - fs_in.fragmentPositionPointLightSpace.xyz);
-	vec3 lightDir = normalize(light.position - fs_in.fragmentPosition);
-	float bias                 = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
-//	float shadow               = currentDepth - bias > closestDepth ? 1.0 : 0.0;
-
-	// PCF
-	float shadow = 0.0;
-	vec2 texelSize = 1.0 / textureSize(flatShadowMap, 0);
-	for (int x = -1; x <= 1; ++x)
-	{
-		for (int y = -1; y <= 1; ++y)
-		{
-			float pcfDepth = texture(flatShadowMap, projectiveCoordinates.xy + vec2(x, y) * texelSize).r;
-			shadow += currentDepth - bias > pcfDepth ? 0.5 : 0.0;
-		}
-	}
-	shadow /= 9.0;
-	
-	if (projectiveCoordinates.z > 1.0)
-		shadow = 0.0;
-
-	// if (projectiveCoordinates.x > 1.0 || projectiveCoordinates.x < -1.0)
-	// 	shadow = 0.0;
-
-	// if (projectiveCoordinates.y > 1.0 || projectiveCoordinates.y < -1.0)
-	// 	shadow = 0.0;
-		
-	return shadow;
-}
